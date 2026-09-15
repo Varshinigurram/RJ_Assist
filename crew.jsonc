@@ -63,11 +63,15 @@
       // Use "guardrail" for one rule or "guardrails" for many
       // Failed guardrails retry up to guardrail_max_retries times
       // "guardrail": "Every factual claim needs context support.",
-      // "guardrails": [
-      //   "Every factual claim must be supported by context.",
-      //   "The answer must match the expected output format."
-      // ],
-      // "guardrail_max_retries": 2,
+      "guardrails": [
+        "The generated journal must contain exactly five sections in this order: Experience, Feelings, Learning, Application, and Conclusion.",
+        "Every section must contain at least 50 words.",
+        "The complete journal must contain between 200 and 400 words.",
+        "The journal must not contain fabricated personal experiences, emotions, classroom activities, assignments, discussions, or other unsupported claims.",
+        "The Application section must connect a realistic practical use directly to concepts from the relevant module or topic.",
+        "The writing must remain simple, natural, honest, and appropriate for an undergraduate student."
+      ],
+      "guardrail_max_retries": 3,
 
       // Advanced task options:
       // Docs: https://docs.crewai.com/concepts/tasks
