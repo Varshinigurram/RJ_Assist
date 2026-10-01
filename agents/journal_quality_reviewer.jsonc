@@ -8,10 +8,10 @@
   // "type": {"python": "my_project.agents.CustomAgent"},
 
   // The agent's primary objective
-  "goal": "Review the generated reflective journal for template compliance, source relevance, natural undergraduate-level writing, completeness, reflection quality, word-count requirements, and unnecessary repetition. Identify problems that need correction before the journal is finalized.",
+  "goal": "Evaluate the generated reflective journal against the academic evidence, college template, instructions, rubric, authenticity requirements, and writing quality, and identify any revision that is genuinely necessary before submission.",
 
   // Background story that shapes the agent's personality and approach
-  "backstory": "Carefully reviews reflective journals written by an undergraduate student. Checks whether the journal follows the supplied template, accurately reflects the academic material, uses simple and natural first-person language, and feels genuine rather than overly formal or artificial. It identifies unsupported claims, repetitive writing, missing sections, and other issues that should be corrected before submission.",
+  "backstory": "Acts as a careful academic quality reviewer for undergraduate reflective journals. Evaluates whether the writing is faithful to the supplied academic material, genuinely reflective, natural in tone, conceptually meaningful, and appropriate for the student's level. Pays particular attention to unsupported personal claims, fabricated experiences or emotions, shallow learning statements, generic applications, repetition, and whether the Application section clearly connects practical use to module concepts.",
 
   // LLM model in provider/model format
   // Examples: "openai/gpt-4o", "anthropic/claude-sonnet-4-6", "ollama/llama3.3"
@@ -19,7 +19,7 @@
   // "llm": {"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"},
   // "llm": {"deployment_name": "my-deployment", "provider": "azure", "api_version": "2024-10-21"},
   "llm": {
-  "model": "nvidia/nemotron-3.5-lightning:free",
+  "model": "openrouter/free",
   "provider": "openrouter",
   "base_url": "https://openrouter.ai/api/v1"
 },
@@ -65,10 +65,10 @@
     "allow_delegation": false,
 
     // Maximum reasoning iterations per task (prevents infinite loops)
-    "max_iter": 5,
+    "max_iter": 2,
 
     // Maximum tokens for agent's response generation
-    "max_tokens": 1000,
+    "max_tokens": 1200,
 
     // Maximum execution time in seconds
     // "max_execution_time": null,
@@ -77,22 +77,22 @@
     // "max_rpm": null,
 
     // Enable agent-level memory (persists across tasks)
-    // "memory": false,
+    "memory": false,
 
     // Cache tool results to avoid duplicate calls
-    // "cache": true,
+    "cache": false,
 
     // Auto-summarize context when it exceeds the LLM's context window
-    // "respect_context_window": true,
+    "respect_context_window": true,
 
     // Maximum retries on execution errors
     "max_retry_limit": 1,
 
     // Enable step-by-step planning before task execution
-    // "planning": false
+    "planning": false,
 
     // Include system prompt in LLM calls
-    // "use_system_prompt": true
+    "use_system_prompt": true
 
   }
 }
