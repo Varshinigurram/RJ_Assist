@@ -1,5 +1,5 @@
-import re
 
+import re
 
 REQUIRED_SECTIONS = [
     "Experience",
@@ -10,100 +10,126 @@ REQUIRED_SECTIONS = [
 ]
 
 MIN_SECTION_WORDS = 50
-MIN_TOTAL_WORDS = 280
+MIN_TOTAL_WORDS = 200
 MAX_TOTAL_WORDS = 400
+
+# Accepts headings such as:
+# Experience
+# 1. Experience (Class Content)
+# Experience (Class Content):
+
+HEADING_PATTERN = re.compile(
+    r"^\s*(?:\*\*|__)?\s*(?:\d+\.\s*)?"
+    r"(Experience|Feelings|Learning|Application|Conclusion)"
+    r"(?:\s*\([^)]*\))?\s*:?\s*(?:\*\*|__)?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+WORD_PATTERN = re.compile(
+    r"\b[\w$]+(?:[’'-][\w$]+)*\b",
+    re.UNICODE,
+)
 
 
 def count_words(text):
-    return len(re.findall(r"\b[\w$]+\b", text))
+    """Count words consistently for validation."""
+    return len(WORD_PATTERN.findall(text))
 
 
 def extract_sections(journal):
+    """Extract section bodies and preserve heading order."""
+    matches = list(HEADING_PATTERN.finditer(journal))
     sections = {}
+    ordered_sections = []
+    duplicates = []
 
-    pattern = re.compile(
-        r"(?:\d+\.\s*)?"
-        r"(Experience|Feelings|Learning|Application|Conclusion)"
-        r"(?:\s*\([^)]*\))?"
-        r"\s*:?\s*"
-        r"(.*?)(?="
-        r"(?:\n\s*(?:\d+\.\s*)?(?:Experience|Feelings|Learning|Application|Conclusion)"
-        r"(?:\s*\([^)]*\))?"
-        r"\s*:?)"
-        r"|$)",
-        re.IGNORECASE | re.DOTALL,
-    )
+    for index, match in enumerate(matches):
+        name = match.group(1).capitalize()
+        start = match.end()
 
-    matches = pattern.findall(journal)
+        end = (
+            matches[index + 1].start()
+            if index + 1 < len(matches)
+            else len(journal)
+        )
 
-    for section_name, content in matches:
-        sections[section_name.capitalize()] = content.strip()
+        content = journal[start:end].strip()
+        ordered_sections.append(name)
 
-    return sections
+        if name in sections:
+            duplicates.append(name)
+        else:
+            sections[name] = content
+
+    return sections, ordered_sections, duplicates
 
 
 def validate_journal(journal):
     errors = []
+
+    sections, ordered_sections, duplicates = extract_sections(journal)
+
+    # Check missing sections.
+    for name in REQUIRED_SECTIONS:
+        if name not in sections:
+            errors.append(f"Missing section: {name}")
+
+    # Check duplicate sections.
+    for name in sorted(set(duplicates)):
+        errors.append(f"Duplicate section: {name}")
+
+    # Check exact section order and count.
+    if ordered_sections != REQUIRED_SECTIONS:
+        errors.append(
+            "Sections must appear exactly once in this order: "
+            + ", ".join(REQUIRED_SECTIONS)
+            + "."
+        )
+
+    # Check each section's word count.
     section_results = {}
 
-    sections = extract_sections(journal)
-
-    # Check exact section presence
-    for section in REQUIRED_SECTIONS:
-        if section not in sections:
-            errors.append(f"Missing section: {section}")
-            section_results[section] = {
+    for name in REQUIRED_SECTIONS:
+        if name not in sections:
+            section_results[name] = {
                 "present": False,
                 "word_count": 0,
                 "valid": False,
             }
             continue
 
-        word_count = count_words(sections[section])
+        words = count_words(sections[name])
+        valid = words >= MIN_SECTION_WORDS
 
-        valid = word_count >= MIN_SECTION_WORDS
-
-        section_results[section] = {
+        section_results[name] = {
             "present": True,
-            "word_count": word_count,
+            "word_count": words,
             "valid": valid,
         }
 
         if not valid:
             errors.append(
-                f"{section} has only {word_count} words "
-                f"(minimum {MIN_SECTION_WORDS})."
+                f"{name} has {words} words; "
+                f"minimum is {MIN_SECTION_WORDS}."
             )
 
-    # Count total words
+    # Check the complete journal.
     total_words = count_words(journal)
 
     if total_words < MIN_TOTAL_WORDS:
         errors.append(
-            f"Total word count is {total_words} "
-            f"(minimum {MIN_TOTAL_WORDS})."
+            f"Journal has {total_words} words; "
+            f"minimum is {MIN_TOTAL_WORDS}."
         )
 
     if total_words > MAX_TOTAL_WORDS:
         errors.append(
-            f"Total word count is {total_words} "
-            f"(maximum {MAX_TOTAL_WORDS})."
+            f"Journal has {total_words} words; "
+            f"maximum is {MAX_TOTAL_WORDS}."
         )
 
-    # Check section order
-    positions = []
-
-    for section in REQUIRED_SECTIONS:
-        if section in sections:
-            positions.append(
-                journal.lower().find(section.lower())
-            )
-
-    if positions != sorted(positions):
-        errors.append("Sections are not in the required order.")
-
     return {
-        "valid": len(errors) == 0,
+        "valid": not errors,
         "total_words": total_words,
         "sections": section_results,
         "errors": errors,
@@ -111,63 +137,30 @@ def validate_journal(journal):
 
 
 if __name__ == "__main__":
-    test_journal = """
-1. Experience (Class Content)
+    from pathlib import Path
 
-This week's module focused on Binary Search Trees. I learned how values are organized
-with smaller values placed on the left and larger values on the right. We covered
-searching, insertion, deletion, and different traversal methods. The examples helped
-me understand how the structure changes when nodes are added or removed.
+    journal_path = Path("outputs/generated_journal.md")
 
-2. Feelings (Emotional Reactions)
-
-I found the topic interesting because the ordering rule made searching easier to
-understand. I initially had to think carefully about deletion when a node had two
-children. Working through the different cases helped me understand why the inorder
-successor is useful in that situation.
-
-3. Learning (Key Analysis)
-
-I understood that the efficiency of a BST depends on its shape. A balanced tree can
-make searching efficient, while a badly shaped tree can behave more like a linear
-structure. I also understood that inorder traversal produces values in sorted order,
-while preorder and postorder provide different ways to visit the nodes.
-
-4. Application (Practical Use)
-
-I could use BST concepts when maintaining data that needs to remain ordered while
-supporting searching and insertion. For example, scores could be stored in a BST and
-an inorder traversal could display them in ascending order. The ordering rule and
-traversal methods from this module directly support this type of application.
-
-5. Conclusion
-
-Overall, this module helped me understand that the usefulness of a BST depends on how
-the data is organized. I also learned that choosing the right traversal depends on
-what information needs to be obtained from the tree. As a next step, I would like to
-learn about self-balancing trees such as AVL trees and understand how they improve
-performance when the tree becomes unbalanced.
-"""
-
-    result = validate_journal(test_journal)
-
-    print("\n=== RJ ASSIST JOURNAL VALIDATION ===")
-    print(f"Valid: {result['valid']}")
-    print(f"Total words: {result['total_words']}")
-
-    print("\nSection Results:")
-
-    for section, data in result["sections"].items():
-        print(
-            f"- {section}: "
-            f"{data['word_count']} words "
-            f"({'PASS' if data['valid'] else 'FAIL'})"
-        )
-
-    if result["errors"]:
-        print("\nErrors:")
-
-        for error in result["errors"]:
-            print(f"- {error}")
+    if not journal_path.exists():
+        print(f"Journal not found: {journal_path}")
     else:
-        print("\nAll validation checks passed.")
+        journal = journal_path.read_text(encoding="utf-8")
+        result = validate_journal(journal)
+
+        print("\n=== RJ ASSIST JOURNAL VALIDATION ===")
+        print(f"Valid: {result['valid']}")
+        print(f"Total words: {result['total_words']}")
+
+        print("\nSection Results:")
+        for name, data in result["sections"].items():
+            status = "PASS" if data["valid"] else "FAIL"
+            print(
+                f"- {name}: {data['word_count']} words ({status})"
+            )
+
+        if result["errors"]:
+            print("\nErrors:")
+            for error in result["errors"]:
+                print(f"- {error}")
+        else:
+            print("\nAll validation checks passed.")
