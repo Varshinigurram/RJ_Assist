@@ -65,10 +65,6 @@
       // Use "guardrail" for one rule or "guardrails" for many
       // Failed guardrails retry up to guardrail_max_retries times
       // "guardrail": "Every factual claim needs context support.",
-      "guardrails": [
-        "Reject the journal unless it has exactly five sections in the required order, every section has at least 50 words, the total is 200–400 words, the writing is natural undergraduate first-person reflection where supported, the journal contains no fabricated personal experiences or unsupported claims, and the Application section connects a realistic practical use directly to relevant module concepts."
-      ],
-      "guardrail_max_retries": 2,
 
       // Advanced task options:
       // Docs: https://docs.crewai.com/concepts/tasks
@@ -99,6 +95,8 @@
 
       // Clear definition of what the output should look like
       "expected_output": "A concise quality assessment beginning with exactly one line: VERDICT: PASS or VERDICT: FAIL. Include section-level findings, structural/word-count observations, authenticity or unsupported-claim findings, evaluation of conceptual learning and the module-specific Application, and concise revision instructions only when the verdict is FAIL.",
+
+      "output_file": "outputs/review_report.md",
 
       // Optional task guardrail(s) validate output before completion
       // Use "guardrail" for one rule or "guardrails" for many
