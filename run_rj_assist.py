@@ -26,13 +26,12 @@ def output_text(value):
 
 def main():
     OUTPUTS.mkdir(parents=True, exist_ok=True)
-    
+
+    # Remove any old draft so a failed run cannot reuse it.
     if DRAFT_FILE.exists():
         DRAFT_FILE.unlink()
-
-# Load the existing three-agent crew and its configured inputs.
-    # Load the existing three-agent crew and its configured inputs.
-    crew, inputs = load_crew(ROOT / "crew.jsonc")
+        
+        crew, inputs = load_crew(ROOT / "crew.jsonc")
 
     print("Running the existing RJ Assist crew...")
     crew.kickoff(inputs=inputs)
@@ -49,32 +48,55 @@ def main():
         for agent in crew.agents
         if agent.role == "Reflective Journal Writer"
     )
-
     
+    analyst_output = output_text(crew.tasks[0].output)
+
+    reviewer = next(
+        agent
+        for agent in crew.agents
+        if agent.role == "Journal Quality Reviewer"
+    )
+
     reviewer_output = output_text(crew.tasks[2].output)
 
     for attempt in range(MAX_REVISION_ATTEMPTS + 1):
-        resulanalyst_output = output_text(crew.tasks[0].output) = validate_journal(journal)
+        structure = validate_journal(journal)
+        grounding = validate_source_grounding(
+            inputs.get("academic_material", ""),
+            journal,
+        )
 
-        reviewer_text = reviewer_output.strip().upper()
-        reviewer_passed = reviewer_text.startswith("VERDICT: PASS")
-        reviewer_failed = not reviewer_passed
+        errors = list(structure["errors"])
+        errors.extend(grounding["errors"])
+
+        reviewer_passed = reviewer_output.startswith(
+            "VERDICT: PASS"
+        )
 
         print(
             f"\nValidation attempt {attempt}: "
-            f"{result['total_words']} words"
+            f"{structure['total_words']} words"
         )
+        print("Structural validation:", structure["valid"])
+        print("Source grounding:", grounding["valid"])
+        print("Reviewer verdict:", reviewer_output.splitlines()[0]
+              if reviewer_output else "Missing verdict")
 
-        if result["valid"] and not reviewer_failed:
+        if (
+            structure["valid"]
+            and grounding["valid"]
+            and reviewer_passed
+        ):
             FINAL_FILE.write_text(
                 journal + "\n",
                 encoding="utf-8",
             )
             REPORT_FILE.write_text(
                 "VERDICT: PASS\n"
-                f"Total words: {result['total_words']}\n"
-                "Structural validation passed.\n"
-                f"Revision attempts: {attempt}\n"
+                f"Total words: {structure['total_words']}\n"
+                "Structural validation: PASS\n"
+                "Source grounding: PASS\n"
+                f"Revision attempts: {attempt}\n\n"
                 f"Reviewer report:\n{reviewer_output}\n",
                 encoding="utf-8",
             )
@@ -85,53 +107,86 @@ def main():
         if attempt == MAX_REVISION_ATTEMPTS:
             break
 
+        # Give the Writer every deterministic validation error.
+        feedback_result = {
+            **structure,
+            "errors": errors or [
+                "The quality reviewer did not approve the journal."
+            ],
+        }
         feedback = build_revision_instructions(
             journal,
-            result,
+            feedback_result,
         )
 
-        if reviewer_failed:
+        if reviewer_output:
             feedback += (
-                "\n\nReviewer findings to address:\n"
+                "\n\nReviewer findings:\n"
                 + reviewer_output
             )
 
         revision_task = Task(
             description=(
-                "Revise the supplied RJ Assist journal.\n\n"
+                "Revise the journal to correct every reported issue.\n"
+                "Treat the supplied academic material as the source "
+                "of truth. Do not add unsupported topics or invent "
+                "personal experiences.\n\n"
                 f"Subject: {inputs.get('subject', '')}\n"
-                f"Week: {inputs.get('week', '')}\n"
-                "Original academic material:\n"
+                f"Week: {inputs.get('week', '')}\n\n"
+                f"Academic material:\n"
                 f"{inputs.get('academic_material', '')}\n\n"
-                "Academic analyst evidence:\n"
-                f"{analyst_output}\n\n"
-                "College instructions:\n"
-                f"{inputs.get('college_instructions', '')}\n\n"
-                "Student reflection (may be empty):\n"
+                f"Analyst evidence:\n{analyst_output}\n\n"
+                f"Student reflection:\n"
                 f"{inputs.get('student_reflection', '')}\n\n"
-                f"{feedback}\n\n"
-                "Do not invent personal experiences or unsupported "
-                "academic claims. Return only the revised journal."
+                f"Revision instructions:\n{feedback}\n\n"
+                "Return only the complete revised journal."
             ),
             expected_output=(
-                "The complete five-section reflective journal, "
-                "with 200–400 words total and at least 50 words "
-                "in each section. Return only the journal."
+                "A complete five-section journal, 200–400 words "
+                "total, with at least 50 words per section, grounded "
+                "in the supplied academic material."
             ),
             agent=writer,
         )
 
-        print(f"Requesting revision {attempt + 1}...")
+        print(f"Requesting Writer revision {attempt + 1}...")
         revised_output = writer.execute_task(revision_task)
-
         journal = output_text(revised_output)
 
         if not journal:
             print("Writer returned empty text; stopping revisions.")
             break
 
-        # Recheck the latest revision rather than trusting the model.
-        reviewer_output = ""
+        # Ask the existing Reviewer to assess the revised version.
+        review_task = Task(
+            description=(
+                "Review this revised journal against the source.\n"
+                "Check topic alignment, unsupported academic claims, "
+                "fabricated personal experiences, all five required "
+                "sections, section word counts, total word count, "
+                "conceptual learning, and practical application.\n"
+                "Return VERDICT: PASS only if the journal meets "
+                "the requirements. Otherwise return VERDICT: FAIL "
+                "and concise reasons.\n\n"
+                f"Subject: {inputs.get('subject', '')}\n"
+                f"Week: {inputs.get('week', '')}\n"
+                f"Academic source:\n"
+                f"{inputs.get('academic_material', '')}\n\n"
+                f"Student reflection:\n"
+                f"{inputs.get('student_reflection', '')}\n\n"
+                f"Revised journal:\n{journal}"
+            ),
+            expected_output=(
+                "First line exactly VERDICT: PASS or VERDICT: FAIL, "
+                "followed by concise reasons."
+            ),
+            agent=reviewer,
+        )
+
+        reviewer_output = output_text(
+            reviewer.execute_task(review_task)
+        )
+
 
     final_result = validate_journal(journal)
 
