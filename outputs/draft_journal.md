@@ -1,0 +1,14 @@
+Experience
+This week’s Data Structures module shifted focus from linear collections to recursive problem formulation and formal algorithmic analysis. Lectures explained how recursive functions break problems into smaller, self-similar instances, and how this viewpoint influences design choices. The class also formalized time complexity using Big-O notation, emphasizing that theoretical predictions should guide practical implementation. Recitation sessions demonstrated converting iterative loops into recursive equivalents, highlighting both the expressive flexibility and the resource constraints each approach introduces.
+
+Feelings
+Reflecting on the recursion material, I felt a genuine intellectual challenge as my default iterative mindset resisted the abstract flow of self-referential functions. At first, the idea of a function invoking itself seemed circular and confusing, but working through structured recurrence examples clarified the underlying logic. I noticed that framing recursion as an intentional design decision, rather than a mystery, lowered my cognitive resistance and made the concepts more approachable.
+
+Learning
+The key insight I gained is that recurrence relations mathematically encode the runtime of recursive algorithms, and that the master theorem offers a practical method for determining asymptotic behavior without fully expanding call trees. I also connected this to the concept of invariants: identifying what remains constant across recursive steps is essential for proving correctness. Furthermore, analyzing the space-time trade-off between recursive elegance and iterative performance has given me a clearer framework for choosing the right approach based on problem constraints.
+
+Application
+I can apply recursion to a current project involving a file-organizer tool, where traversing nested folders mirrors the recursive structure of tree data types. Each folder call processes its contents and recurses into subfolders, naturally matching the recursive paradigm. Understanding that deep nesting risks stack overflow has already informed my decision to add a depth check and, when appropriate, switch to an iterative queue-based approach to maintain stability.
+
+Conclusion
+The most lasting takeaway is that recursion combines expressive power with responsibility; successful use requires careful base-case definition and explicit complexity consideration. Going forward, I will practice implementing recursive solutions with test cases that verify base conditions, and I will profile runtime to compare against iterative versions. This habit should help me transition confidently between design styles depending on the problem at hand.
