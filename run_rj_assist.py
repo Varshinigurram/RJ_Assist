@@ -30,8 +30,10 @@ def main():
     # Remove any old draft so a failed run cannot reuse it.
     if DRAFT_FILE.exists():
         DRAFT_FILE.unlink()
-        
-        crew, inputs = load_crew(ROOT / "crew.jsonc")
+
+    crew, inputs = load_crew(ROOT / "crew.jsonc")
+
+    print("Running the existing RJ Assist crew...")
 
     print("Running the existing RJ Assist crew...")
     crew.kickoff(inputs=inputs)
@@ -188,25 +190,38 @@ def main():
         )
 
 
-    final_result = validate_journal(journal)
+        final_result = validate_journal(journal)
+
+    final_grounding = validate_source_grounding(
+        inputs.get("academic_material", ""),
+        journal,
+    )
+
+    all_errors = (
+        final_result["errors"]
+        + final_grounding["errors"]
+    )
 
     REPORT_FILE.write_text(
         "VERDICT: FAIL\n"
         "The journal did not pass all required checks.\n"
         f"Total words: {final_result['total_words']}\n"
-        f"Errors: {final_result['errors']}\n"
-        f"Revision attempts: {MAX_REVISION_ATTEMPTS}\n",
+        f"Structural validation: {final_result['valid']}\n"
+        f"Source grounding: {final_grounding['valid']}\n"
+        f"Reviewer verdict: {reviewer_output.splitlines()[0] if reviewer_output else 'Missing verdict'}\n"
+        f"Errors: {all_errors}\n"
+        f"Revision attempts: {attempt}\n",
         encoding="utf-8",
     )
 
-    # Keep the rejected output separate; do not replace the final journal.
+    # Keep the rejected output separate from the accepted journal.
     (OUTPUTS / "journal_needing_revision.md").write_text(
         journal + "\n",
         encoding="utf-8",
     )
 
     print("\nThe journal still needs revision.")
-    print("See outputs/validation_report.md for the errors.")
+    print(f"Validation report saved: {REPORT_FILE}")
     print("The rejected draft is saved separately.")
 
 

@@ -1,14 +1,16 @@
-Experience
-This week’s Data Structures module shifted focus from linear collections to recursive problem formulation and formal algorithmic analysis. Lectures explained how recursive functions break problems into smaller, self-similar instances, and how this viewpoint influences design choices. The class also formalized time complexity using Big-O notation, emphasizing that theoretical predictions should guide practical implementation. Recitation sessions demonstrated converting iterative loops into recursive equivalents, highlighting both the expressive flexibility and the resource constraints each approach introduces.
 
-Feelings
-Reflecting on the recursion material, I felt a genuine intellectual challenge as my default iterative mindset resisted the abstract flow of self-referential functions. At first, the idea of a function invoking itself seemed circular and confusing, but working through structured recurrence examples clarified the underlying logic. I noticed that framing recursion as an intentional design decision, rather than a mystery, lowered my cognitive resistance and made the concepts more approachable.
 
-Learning
-The key insight I gained is that recurrence relations mathematically encode the runtime of recursive algorithms, and that the master theorem offers a practical method for determining asymptotic behavior without fully expanding call trees. I also connected this to the concept of invariants: identifying what remains constant across recursive steps is essential for proving correctness. Furthermore, analyzing the space-time trade-off between recursive elegance and iterative performance has given me a clearer framework for choosing the right approach based on problem constraints.
+Experience  
+The material introduces a Binary Search Tree as a structure where each node's left subtree holds smaller values and the right subtree holds larger values. It describes insertion as adding a new value while preserving this ordering, deletion as removing a node and maintaining the organization, and searching as locating a value within the tree. The concept of tree traversal is presented with inorder, preorder, and postorder methods, each visiting nodes in a distinct order.
 
-Application
-I can apply recursion to a current project involving a file-organizer tool, where traversing nested folders mirrors the recursive structure of tree data types. Each folder call processes its contents and recurses into subfolders, naturally matching the recursive paradigm. Understanding that deep nesting risks stack overflow has already informed my decision to add a depth check and, when appropriate, switch to an iterative queue-based approach to maintain stability.
+Feelings  
+The description of the Binary Search Tree emphasizes a clear rule: left subtree values are smaller, right subtree values are larger. Insertion and deletion are presented as operations that preserve this rule. Searching is defined as locating a value within the tree. The three traversal methods— inorder, preorder, and postorder— are introduced as systematic ways to visit all nodes. These methods provide different sequences for examining the tree's contents.
 
-Conclusion
-The most lasting takeaway is that recursion combines expressive power with responsibility; successful use requires careful base-case definition and explicit complexity consideration. Going forward, I will practice implementing recursive solutions with test cases that verify base conditions, and I will profile runtime to compare against iterative versions. This habit should help me transition confidently between design styles depending on the problem at hand.
+Learning  
+I have learned that a Binary Search Tree is defined by the property that all values in the left subtree are smaller than the node's value and all values in the right subtree are larger. The insertion operation adds a new value while maintaining this property. Deletion removes a node and adjusts the tree to preserve the ordering. Searching locates a value by traversing the tree. Additionally, I understand the three traversal methods: inorder visits left, node, right; preorder visits node, left, right; and postorder visits left, right, node.
+
+Application  
+The insertion operation allows adding a new value while maintaining the left-smaller, right-larger property. The deletion operation removes a node and preserves this property. Searching locates a value within the tree. These operations together enable the tree to be updated and queried. The traversal methods— inorder, preorder, and postorder— each provide a distinct order for visiting all nodes. The structure of the tree influences how these operations behave.
+
+Conclusion  
+The material has outlined the core elements of a Binary Search Tree, including its defining property and the operations of insertion, deletion, and searching. It has also introduced the three traversal methods— inorder, preorder, and postorder— which each visit nodes in a specific sequence. Understanding these concepts and how they interact provides a basis for more advanced topics in data structures.
