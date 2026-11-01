@@ -1,9 +1,8 @@
-
 import re
 
 
 def normalize(text: str) -> str:
-    """Normalize text for simple, deterministic topic checks."""
+    """Normalize text for consistent keyword checks."""
     return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
 
 
@@ -12,10 +11,10 @@ def validate_source_grounding(
     journal: str,
 ) -> dict:
     """
-    Check whether the journal contains the source's main topic
-    and avoids obvious unrelated-topic substitutions.
+    Perform deterministic checks for the current BST assignment.
 
-    This is a heuristic check, not a complete factuality detector.
+    This is a heuristic validator. It cannot guarantee that every
+    sentence is factually supported by the academic source.
     """
     source = normalize(academic_material)
     output = normalize(journal)
@@ -28,27 +27,67 @@ def validate_source_grounding(
             "errors": ["Academic material is empty."],
         }
 
-    # Explicit topic check for the current BST test case.
+    if not output:
+        return {
+            "valid": False,
+            "errors": ["Journal is empty."],
+        }
+
+    # Check that the journal addresses the supplied topic.
     if "binary search tree" in source:
         if "binary search tree" not in output:
             errors.append(
-                "Journal does not mention the source topic: "
-                "Binary Search Trees."
+                "Journal does not mention Binary Search Trees."
             )
 
-        unrelated_terms = [
-            "master theorem",
-            "recurrence relation",
-            "recursive function",
-            "big o notation",
-            "file organizer",
-        ]
+    # Check claims that are not supported by the current BST source.
+    unsupported_claims = {
+        "balanced tree performance": [
+            "balanced tree",
+            "balanced trees",
+            "logarithmic performance",
+            "linear time",
+            "o log n",
+            "o n",
+        ],
+        "deletion implementation details": [
+            "inorder predecessor",
+            "inorder successor",
+            "predecessor or successor",
+        ],
+        "tree serialization": [
+            "serialize",
+            "serialization",
+            "rebuild the tree",
+        ],
+        "unsupported traversal applications": [
+            "quick reconstruction",
+            "deleting children before parents",
+            "safe cleanup",
+        ],
+    }
 
-        for term in unrelated_terms:
-            if term in output and term not in source:
+    for category, phrases in unsupported_claims.items():
+        for phrase in phrases:
+            if phrase in output and phrase not in source:
                 errors.append(
-                    f"Potentially unsupported topic: {term}."
+                    f"Potentially unsupported claim "
+                    f"({category}): '{phrase}'."
                 )
+
+    # Check for common unrelated topics.
+    unrelated_terms = [
+        "master theorem",
+        "recurrence relation",
+        "recursive function",
+        "file organizer",
+    ]
+
+    for term in unrelated_terms:
+        if term in output and term not in source:
+            errors.append(
+                f"Potentially unsupported topic: '{term}'."
+            )
 
     return {
         "valid": not errors,
@@ -61,16 +100,25 @@ if __name__ == "__main__":
 
     source = (
         "This week's module covered Binary Search Trees. "
-        "The material covered insertion, deletion, searching, "
-        "and inorder, preorder, and postorder traversal."
+        "Smaller values are placed in the left subtree and "
+        "larger values in the right subtree. The module covered "
+        "insertion, deletion, searching, and inorder, preorder, "
+        "and postorder traversal. Operations depend on tree "
+        "structure, and traversals visit nodes in different ways."
     )
 
-    draft_path = Path("outputs/draft_journal.md")
+    journal_path = Path("outputs/generated_journal.md")
 
-    if not draft_path.exists():
+    if not journal_path.exists():
         raise FileNotFoundError(
-            "Draft not found: outputs/draft_journal.md"
+            f"Journal not found: {journal_path}"
         )
 
-    draft = draft_path.read_text(encoding="utf-8-sig")
-    print(validate_source_grounding(source, draft))
+    journal = journal_path.read_text(encoding="utf-8-sig")
+
+    result = validate_source_grounding(source, journal)
+
+    print("Source grounding:", result["valid"])
+
+    for error in result["errors"]:
+        print("-", error)

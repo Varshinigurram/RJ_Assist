@@ -34,8 +34,6 @@ def main():
     crew, inputs = load_crew(ROOT / "crew.jsonc")
 
     print("Running the existing RJ Assist crew...")
-
-    print("Running the existing RJ Assist crew...")
     crew.kickoff(inputs=inputs)
 
     if not DRAFT_FILE.exists():
@@ -190,17 +188,54 @@ def main():
         )
 
 
-        final_result = validate_journal(journal)
+    # Validate the final journal, including when a revision exits early.
+    final_result = validate_journal(journal)
 
     final_grounding = validate_source_grounding(
         inputs.get("academic_material", ""),
         journal,
     )
 
-    all_errors = (
-        final_result["errors"]
-        + final_grounding["errors"]
+    final_reviewer_passed = reviewer_output.startswith(
+        "VERDICT: PASS"
     )
+
+    final_errors = (
+        list(final_result["errors"])
+        + list(final_grounding["errors"])
+    )
+
+    if not final_reviewer_passed:
+        final_errors.append(
+            "The quality reviewer did not return VERDICT: PASS."
+        )
+
+    final_passed = (
+        final_result["valid"]
+        and final_grounding["valid"]
+        and final_reviewer_passed
+    )
+
+    if final_passed:
+        FINAL_FILE.write_text(
+            journal + "\n",
+            encoding="utf-8",
+        )
+
+        REPORT_FILE.write_text(
+            "VERDICT: PASS\n"
+            f"Total words: {final_result['total_words']}\n"
+            "Structural validation: PASS\n"
+            "Source grounding: PASS\n"
+            "Reviewer verdict: PASS\n"
+            f"Revision attempts: {attempt}\n\n"
+            f"Reviewer report:\n{reviewer_output}\n",
+            encoding="utf-8",
+        )
+
+        print(f"\nFinal journal saved: {FINAL_FILE}")
+        print(f"Validation report saved: {REPORT_FILE}")
+        return
 
     REPORT_FILE.write_text(
         "VERDICT: FAIL\n"
@@ -208,13 +243,15 @@ def main():
         f"Total words: {final_result['total_words']}\n"
         f"Structural validation: {final_result['valid']}\n"
         f"Source grounding: {final_grounding['valid']}\n"
-        f"Reviewer verdict: {reviewer_output.splitlines()[0] if reviewer_output else 'Missing verdict'}\n"
-        f"Errors: {all_errors}\n"
-        f"Revision attempts: {attempt}\n",
+        f"Reviewer verdict: "
+        f"{reviewer_output.splitlines()[0] if reviewer_output else 'Missing verdict'}\n"
+        f"Revision attempts: {attempt}\n"
+        f"Errors: {final_errors}\n\n"
+        f"Reviewer report:\n{reviewer_output}\n",
         encoding="utf-8",
     )
 
-    # Keep the rejected output separate from the accepted journal.
+    # Keep rejected content separate from the accepted journal.
     (OUTPUTS / "journal_needing_revision.md").write_text(
         journal + "\n",
         encoding="utf-8",
