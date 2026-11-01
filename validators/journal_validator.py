@@ -1,4 +1,3 @@
-
 import re
 
 REQUIRED_SECTIONS = [

@@ -12,16 +12,26 @@ def build_revision_instructions(journal, validation_result):
     errors = validation_result["errors"]
 
     instructions = [
-        "Revise the journal below to satisfy the validation requirements.",
-        "Preserve the five required sections in this exact order:",
-        "Experience, Feelings, Learning, Application, Conclusion.",
-        "Keep at least 50 words in every section and 200–400 words overall.",
-        "Preserve source-supported academic content and module-specific applications.",
-        "Do not invent student emotions or personal experiences.",
-        "Return only the complete revised journal.",
-        "",
-        "Validation errors:",
-    ]
+    "Revise the journal to satisfy all validation requirements.",
+    "Use exactly these five headings in this order:",
+    "Experience, Feelings, Learning, Application, Conclusion.",
+    "Write 200-400 words in total.",
+    "Write at least 50 words under each heading.",
+    "Aim for 350-390 words to stay safely within the limit.",
+    "Use only the supplied academic material for academic claims.",
+    "Do not introduce technical details absent from the source.",
+    "Do not invent classroom events, personal emotions, or experiences.",
+    "If student reflections are not supplied, use honest, neutral "
+    "reflection about the concepts rather than claiming specific "
+    "personal experiences.",
+    "In Application, explain a reasonable way to apply the supplied "
+    "concepts. Clearly distinguish an illustrative example from "
+    "something explicitly covered in the module.",
+    "Avoid repeating the same point across multiple sections.",
+    "Return only the complete journal, with no introduction or notes.",
+    "",
+    "Validation errors:",
+]
 
     instructions.extend(f"- {error}" for error in errors)
     instructions.extend(["", "Current journal:", journal])
