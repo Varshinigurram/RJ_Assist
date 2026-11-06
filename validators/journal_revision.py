@@ -17,7 +17,7 @@ def build_revision_instructions(journal, validation_result):
     "Experience, Feelings, Learning, Application, Conclusion.",
     "Write 200-400 words in total.",
     "Write at least 50 words under each heading.",
-    "Aim for 350-390 words to stay safely within the limit.",
+    "Aim for approximately 300-320 words to stay safely within the 200-400 word limit.",
     "Use only the supplied academic material for academic claims.",
     "Do not introduce technical details absent from the source.",
     "Do not invent classroom events, personal emotions, or experiences.",

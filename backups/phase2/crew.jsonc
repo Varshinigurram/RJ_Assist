@@ -1,0 +1,185 @@
+{
+  // Display name for this crew
+  "name": "RJ_Assist",
+
+  // Agents to include — each must have a matching agents/<name>.jsonc file
+  "agents": ["academic_module_analyst", "reflective_journal_writer", "journal_quality_reviewer"],
+
+  // Task definitions — executed in order for sequential process
+  "tasks": [
+    {
+      // Task identifier
+      "name": "analyze_the_provided_academic_task",
+
+      // What the task should accomplish
+      // Use {placeholder} inputs here; crewai run prompts for missing values
+      "description": "Analyze ONLY the academic material explicitly supplied in {academic_material} for {subject} during {week}. Treat the supplied academic material as the sole source of truth for what was covered. Do not use general knowledge to add topics that are absent from the supplied material. If a topic, activity, example, or concept is not present in the supplied material, mark it as 'Not supported by source' rather than adding it.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A structured academic evidence package containing the supported subject and week information, modules or topics covered, key concepts, definitions, methods, examples, important relationships, explicitly supported class activities or observations, and realistic practical applications connected to the concepts. Clearly separate source-supported academic information from application suggestions. Do not include invented personal experiences or unsupported classroom events.",
+
+      // Optional task guardrail(s) validate output before completion
+      // Use "guardrail" for one rule or "guardrails" for many
+      // Failed guardrails retry up to guardrail_max_retries times
+      // "guardrail": "Every factual claim needs context support.",
+      // "guardrails": [
+      //   "Every factual claim must be supported by context.",
+      //   "The answer must match the expected output format."
+      // ],
+      // "guardrail_max_retries": 2,
+
+      // Advanced task options:
+      // Docs: https://docs.crewai.com/concepts/tasks
+      // "type": "ConditionalTask",
+      // "condition": { "python": "my_project.conditions.should_run" },
+      // "output_json": { "python": "my_project.models.ReportOutput" },
+      // "output_pydantic": null,
+      // "response_model": null,
+      // "converter_cls": { "python": "my_project.converters.CustomConverter" },
+      // "markdown": false,
+      // "input_files": { "brief": "data/brief.txt" },
+      // "security_config": {},
+
+      // Which agent handles this task
+      "agent": "academic_module_analyst"
+
+      // "tools": [],
+      // "human_input": false,
+      // "async_execution": false
+    }
+,
+    {
+      // Task identifier
+      "name": "write_a_reflective_journal_task",
+
+      // What the task should accomplish
+      // Use {placeholder} inputs here; crewai run prompts for missing values
+      "description": "CRITICAL SOURCE-GROUNDING RULE: The academic material supplied in {academic_material} and the Academic Module Analyst's evidence package must agree on the actual topic for {subject} during {week}. The supplied academic material is authoritative and the sole source of truth. Do not substitute another topic, even if related. Before writing, identify the exact topic and use only concepts explicitly supported by {academic_material} or the evidence package. Every academic claim in the journal must be supported by the source; do not introduce Big-O notation, time complexity, balanced trees, or unsupported deletion implementation details (such as inorder predecessor or successor algorithms).\n\nIf {student_reflection} is empty, do not invent personal events, classroom activities, assignments, or fabricated emotions; write honest cognitive reflections on understanding, perspectives, and concepts. When {student_reflection} is provided, incorporate it naturally.\n\nFollow the college instructions:\n{college_instructions}\n\nUse the required journal template:\n{journal_template}\n\nThe journal must contain exactly five sections using standard headings:\n1. Experience\n2. Feelings\n3. Learning\n4. Application\n5. Conclusion\n\nWord count requirements: The total journal must contain between 200 and 400 words (including headings), aiming for approximately 300–320 words total. Each of the five sections must contain at least 50 words. Write in simple, natural, clear undergraduate-level English. In Application, explain a realistic practical use connected to module concepts. Return only the complete five-section journal.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A complete five-section reflective journal using exactly these sections: Experience, Feelings, Learning, Application, and Conclusion. The journal must contain 200–400 words total (aiming for approximately 300–320 words), with at least 50 words in every section. It must demonstrate what was learned, how the learning was experienced without fabricated personal claims, what was understood, how module concepts can be applied in realistic contexts, and the overall takeaway. The writing must be simple, natural, honest, academic, first-person where appropriate, and grounded strictly in {academic_material} and optional student reflection.",
+
+      "output_file": "outputs/draft_journal.md",
+      "create_directory": true,
+      // Optional task guardrail(s) validate output before completion
+      // Use "guardrail" for one rule or "guardrails" for many
+      // Failed guardrails retry up to guardrail_max_retries times
+      // "guardrail": "Every factual claim needs context support.",
+
+      // Advanced task options:
+      // Docs: https://docs.crewai.com/concepts/tasks
+      // "type": "ConditionalTask",
+      // "condition": { "python": "my_project.conditions.should_run" },
+      // "output_json": { "python": "my_project.models.ReportOutput" },
+      // "output_pydantic": null,
+      // "response_model": null,
+      // "converter_cls": { "python": "my_project.converters.CustomConverter" },
+      // "markdown": false,
+      // "input_files": { "brief": "data/brief.txt" },
+      // "security_config": {},
+
+      // Which agent handles this task
+      "agent": "reflective_journal_writer"
+
+      // "tools": [],
+      // "human_input": false,
+      // "async_execution": false
+    },
+    {
+      // Task identifier
+      "name": "review_the_generated_reflective_task",
+
+      // What the task should accomplish
+      // Use {placeholder} inputs here; crewai run prompts for missing values
+      "description": "You are reviewing the reflective journal produced by the Reflective Journal Writer against the Analyst evidence package and the authoritative academic material supplied for {subject} ({week}):\n{academic_material}\n\nEvaluate the journal against the source material and college requirements. Check that the journal contains exactly five sections in this order: Experience, Feelings, Learning, Application, Conclusion. Check that each section contains at least 50 words and the entire journal contains 200–400 words total. Check that all academic claims are strictly grounded in {academic_material} and identify any unsupported claims (such as Big-O notation, time complexity, balanced trees, or deletion predecessor/successor mechanics). Verify that personal experiences and emotions are not fabricated when student reflection is absent. Check conceptual learning and that the Application section connects a realistic practical use to a concept actually taught. Begin your response with exactly one line: VERDICT: PASS or VERDICT: FAIL. Return VERDICT: PASS only if all requirements are satisfied. Follow the verdict with concise section-level findings, word-count observations, unsupported claims, and revision instructions only when the verdict is FAIL.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A concise quality assessment beginning with exactly one line: VERDICT: PASS or VERDICT: FAIL. Include section-level findings, structural/word-count observations, authenticity or unsupported-claim findings, evaluation of conceptual learning and the module-specific Application, and concise revision instructions only when the verdict is FAIL.",
+
+      "output_file": "outputs/review_report.md",
+
+      // Optional task guardrail(s) validate output before completion
+      // Use "guardrail" for one rule or "guardrails" for many
+      // Failed guardrails retry up to guardrail_max_retries times
+      // "guardrail": "Every factual claim needs context support.",
+      // "guardrails": [
+      //   "Every factual claim must be supported by context.",
+      //   "The answer must match the expected output format."
+      // ],
+      // "guardrail_max_retries": 2,
+
+      // Advanced task options:
+      // Docs: https://docs.crewai.com/concepts/tasks
+      // "type": "ConditionalTask",
+      // "condition": { "python": "my_project.conditions.should_run" },
+      // "output_json": { "python": "my_project.models.ReportOutput" },
+      // "output_pydantic": null,
+      // "response_model": null,
+      // "converter_cls": { "python": "my_project.converters.CustomConverter" },
+      // "markdown": false,
+      // "input_files": { "brief": "data/brief.txt" },
+      // "security_config": {},
+
+      // Which agent handles this task
+      "agent": "journal_quality_reviewer"
+
+      // "tools": [],
+      // "human_input": false,
+      // "async_execution": false
+    }
+
+  ],
+
+  // Execution process
+  // "sequential" — tasks run in order, each receiving prior task outputs
+  // "hierarchical" — a manager agent delegates tasks (requires manager_llm)
+  "process": "sequential",
+
+  // Enable verbose logging during execution
+  "verbose": true,
+
+  // Enable crew memory — persists context and learnings across tasks
+  "memory": false,
+
+  // Automatically plan the execution strategy before running tasks
+  // "planning": false,
+
+  // LLM for the planning step (used when planning is true)
+  // "planning_llm": "openai/gpt-4o",
+
+  // LLM for the manager agent (required when process is "hierarchical")
+  // "manager_llm": "openai/gpt-4o",
+
+  // Crew-level LLM fields also accept object form for custom endpoints
+  // "chat_llm": {"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"},
+
+  // Advanced crew options:
+  // Docs: https://docs.crewai.com/concepts/crews
+  // For hierarchical crews, manager_agent can reference an agents/<name>.jsonc file
+  // that is not included in the "agents" list.
+  // "manager_agent": "academic_module_analyst",
+  // "before_kickoff_callbacks": [{"python": "my_project.callbacks.before_kickoff"}],
+  // "after_kickoff_callbacks": [{"python": "my_project.callbacks.after_kickoff"}],
+  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "max_rpm": null,
+  // "cache": true,
+  // "knowledge_sources": [],
+  // "embedder": {},
+  // "output_log_file": "crew.log",
+  // "stream": false,
+  // "tracing": false,
+  // "security_config": {},
+
+  // Optional runtime input defaults.
+  // Use {placeholder} in agent or task text, for example:
+  // "description": "Research {topic} and write a brief"
+  // `crewai run` prompts for any placeholders missing from this object.
+  "inputs": {
+  "subject": "Data Structures",
+  "week": "Week 5",
+  "academic_material": "This week's module covered Binary Search Trees. The material explained that a binary search tree organizes values so that smaller values are placed in the left subtree and larger values are placed in the right subtree. The module covered insertion, deletion, searching, and tree traversal. Traversal methods included inorder, preorder, and postorder traversal. The material also explained that these operations depend on the structure of the tree and that traversal provides different ways of visiting the stored nodes.",
+  "journal_template": "1. Experience (Class Content)\\n2. Feelings (Emotional Reactions)\\n3. Learning (Key Analysis)\\n4. Application (Practical Use)\\n5. Conclusion",
+  "college_instructions": "The journal must demonstrate what was learned, how the learning was experienced, what was understood, and how the learning will be applied. Use first-person reflection where appropriate. Reflections should be honest, thoughtful, and academic. The total journal must contain 200–400 words. Each section should be substantial and demonstrate meaningful reflection. The Application section should explain how concepts from the relevant module can be used in practical situations. The writing should be natural and appropriate for an undergraduate student.",
+  "student_reflection": ""
+}
+}

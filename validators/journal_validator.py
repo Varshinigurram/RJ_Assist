@@ -16,9 +16,12 @@ MAX_TOTAL_WORDS = 400
 # Experience
 # 1. Experience (Class Content)
 # Experience (Class Content):
+# ## Experience
+# ### 1. Experience (Class Content)
+# **Experience**
 
 HEADING_PATTERN = re.compile(
-    r"^\s*(?:\*\*|__)?\s*(?:\d+\.\s*)?"
+    r"^\s*(?:#{1,6}\s*)?(?:\*\*|__)?\s*(?:\d+\.\s*)?(?:\*\*|__)?\s*"
     r"(Experience|Feelings|Learning|Application|Conclusion)"
     r"(?:\s*\([^)]*\))?\s*:?\s*(?:\*\*|__)?\s*$",
     re.IGNORECASE | re.MULTILINE,

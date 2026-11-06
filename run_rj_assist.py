@@ -1,3 +1,5 @@
+import re
+
 from validators.source_validator import validate_source_grounding
 from pathlib import Path
 
@@ -18,6 +20,46 @@ REPORT_FILE = OUTPUTS / "validation_report.md"
 
 MAX_REVISION_ATTEMPTS = 2
 
+# Matches "VERDICT: PASS" as an isolated token at the very start of the text,
+# regardless of leading whitespace, Markdown bold markers (**), or trailing
+# punctuation.  Does NOT match "VERDICT: PASS WITH CONDITIONS" or similar.
+_VERDICT_PASS_RE = re.compile(
+    r"^\s*(?:\*{1,2})?\s*VERDICT:\s*PASS\s*(?:\*{1,2})?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+# Phrases that indicate a moderation or error response rather than a journal.
+_MODERATION_PHRASES = (
+    "user safety:",
+    "content policy",
+    "cannot assist",
+    "i'm unable",
+    "i am unable",
+    "as an ai",
+)
+
+
+def is_verdict_pass(text: str) -> bool:
+    """Return True only when the first non-empty line is an unambiguous VERDICT: PASS."""
+    if not text:
+        return False
+    first_line = next(
+        (ln for ln in text.splitlines() if ln.strip()), ""
+    )
+    return bool(_VERDICT_PASS_RE.match(first_line))
+
+
+def is_valid_journal_text(text: str) -> bool:
+    """Return False for empty, moderation, or error responses."""
+    if not text or not text.strip():
+        return False
+    lower = text.lower()
+    if any(phrase in lower for phrase in _MODERATION_PHRASES):
+        return False
+    # Require the text to contain at least one of the five section names.
+    section_names = ("experience", "feelings", "learning", "application", "conclusion")
+    return any(name in lower for name in section_names)
+
 
 def output_text(value):
     """Extract readable text from CrewAI task results."""
@@ -27,21 +69,38 @@ def output_text(value):
 def main():
     OUTPUTS.mkdir(parents=True, exist_ok=True)
 
-    # Remove any old draft so a failed run cannot reuse it.
-    if DRAFT_FILE.exists():
-        DRAFT_FILE.unlink()
+    # Clear outputs from any previous run so stale files cannot be mistaken
+    # for results produced by this run.
+    for stale in (DRAFT_FILE, FINAL_FILE, REPORT_FILE):
+        if stale.exists():
+            stale.unlink()
 
     crew, inputs = load_crew(ROOT / "crew.jsonc")
 
     print("Running the existing RJ Assist crew...")
     crew.kickoff(inputs=inputs)
 
-    if not DRAFT_FILE.exists():
-        raise FileNotFoundError(
-            f"Writer draft was not created: {DRAFT_FILE}"
-        )
+    # Try the on-disk draft first; fall back to the in-memory task output.
+    if DRAFT_FILE.exists():
+        journal = DRAFT_FILE.read_text(encoding="utf-8-sig").strip()
+    else:
+        # crew.tasks[1] is the Writer task.  .output is a TaskOutput object;
+        # output_text() safely extracts .raw from it.
+        in_memory = output_text(crew.tasks[1].output)
+        if in_memory:
+            journal = in_memory
+            print("Note: draft_journal.md not flushed to disk; using in-memory Writer output.")
+        else:
+            raise FileNotFoundError(
+                f"Writer produced no output and {DRAFT_FILE} was not created. "
+                "Check the OpenRouter API key and model availability."
+            )
 
-    journal = DRAFT_FILE.read_text(encoding="utf-8-sig").strip()
+    if not is_valid_journal_text(journal):
+        raise ValueError(
+            f"Writer output looks like a moderation or error response, not a journal.\n"
+            f"First 200 chars: {journal[:200]!r}"
+        )
 
     writer = next(
         agent
@@ -69,9 +128,7 @@ def main():
         errors = list(structure["errors"])
         errors.extend(grounding["errors"])
 
-        reviewer_passed = reviewer_output.startswith(
-            "VERDICT: PASS"
-        )
+        reviewer_passed = is_verdict_pass(reviewer_output)
 
         print(
             f"\nValidation attempt {attempt}: "
@@ -128,11 +185,15 @@ def main():
         revision_task = Task(
             description=(
                 "Revise the journal to correct every reported issue.\n"
-                "Treat the supplied academic material as the source "
-                "of truth. Do not add unsupported topics or invent "
-                "personal experiences.\n\n"
+                "Treat the supplied academic material as the sole source "
+                "of truth. Do not add unsupported topics, Big-O notation, "
+                "balanced-tree details, or invent personal experiences.\n\n"
                 f"Subject: {inputs.get('subject', '')}\n"
                 f"Week: {inputs.get('week', '')}\n\n"
+                f"College instructions:\n"
+                f"{inputs.get('college_instructions', '')}\n\n"
+                f"Journal template:\n"
+                f"{inputs.get('journal_template', '')}\n\n"
                 f"Academic material:\n"
                 f"{inputs.get('academic_material', '')}\n\n"
                 f"Analyst evidence:\n{analyst_output}\n\n"
@@ -142,9 +203,10 @@ def main():
                 "Return only the complete revised journal."
             ),
             expected_output=(
-                "A complete five-section journal, 200–400 words "
-                "total, with at least 50 words per section, grounded "
-                "in the supplied academic material."
+                "A complete five-section journal (Experience, Feelings, "
+                "Learning, Application, Conclusion), 200–400 words total "
+                "(aiming for approximately 300–320 words), with at least "
+                "50 words per section, grounded in the supplied academic material."
             ),
             agent=writer,
         )
@@ -153,8 +215,16 @@ def main():
         revised_output = writer.execute_task(revision_task)
         journal = output_text(revised_output)
 
-        if not journal:
-            print("Writer returned empty text; stopping revisions.")
+        if not is_valid_journal_text(journal):
+            print(
+                "Writer returned empty or invalid text (possibly a moderation "
+                "response); stopping revisions."
+            )
+            # Preserve whatever was returned for debugging.
+            if journal:
+                (OUTPUTS / "journal_needing_revision.md").write_text(
+                    journal + "\n", encoding="utf-8"
+                )
             break
 
         # Ask the existing Reviewer to assess the revised version.
@@ -196,9 +266,7 @@ def main():
         journal,
     )
 
-    final_reviewer_passed = reviewer_output.startswith(
-        "VERDICT: PASS"
-    )
+    final_reviewer_passed = is_verdict_pass(reviewer_output)
 
     final_errors = (
         list(final_result["errors"])

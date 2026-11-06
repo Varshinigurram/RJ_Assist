@@ -58,7 +58,7 @@
   // Agent behavior settings
   "settings": {
     // Show detailed execution logs
-    "verbose": false,
+    "verbose": true,
 
     // Allow this agent to delegate tasks to other agents in the crew
     "allow_delegation": false,
